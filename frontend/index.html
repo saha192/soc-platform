@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>SOC Stock Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <!-- Leaflet Draw -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
+
+  <style>
+  
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  
+
+    :root{
+      --panel: rgba(255,255,255,0.92);
+      --panelBorder: rgba(0,0,0,0.08);
+      --text: #0f172a;
+      --muted: #475569;
+      --shadow: 0 20px 60px rgba(0,0,0,0.22);
+      --radius: 16px;
+
+      --primary: #2563eb;
+      --primary2: #1d4ed8;
+      --green: #22c55e;
+
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --danger:  #ef4444;
+
+      --btnBg: rgba(15,23,42,0.05);
+      --btnBorder: rgba(0,0,0,0.08);
+      --cardBg: rgba(255,255,255,0.75);
+      --statusBg: rgba(15,23,42,0.04);
+      --statusBorder: rgba(0,0,0,0.15);
+
+      --legendBg: rgba(255,255,255,0.92);
+      --legendBorder: rgba(0,0,0,0.08);
+
+      --baseBg: #0b1220;
+    }
+
+    body.dark{
+      --panel: rgba(17, 24, 39, 0.86);
+      --panelBorder: rgba(255,255,255,0.10);
+      --text: #e5e7eb;
+      --muted: #cbd5e1;
+      --shadow: 0 20px 70px rgba(0,0,0,0.55);
+
+      --btnBg: rgba(255,255,255,0.06);
+      --btnBorder: rgba(255,255,255,0.10);
+      --cardBg: rgba(255,255,255,0.05);
+      --statusBg: rgba(255,255,255,0.05);
+      --statusBorder: rgba(255,255,255,0.16);
+
+      --legendBg: rgba(17, 24, 39, 0.86);
+      --legendBorder: rgba(255,255,255,0.12);
+
+      --baseBg: #060914;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: var(--baseBg);
+    }
+
+    .app { height: 100%; width: 100%; position: relative; overflow: hidden; }
+    #map { height: 100%; width: 100%; }
+
+    .panel {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      width: 380px;
+      max-width: calc(100% - 32px);
+      background: var(--panel);
+      border: 1px solid var(--panelBorder);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px 14px 12px 14px;
+      backdrop-filter: blur(8px);
+      z-index: 999;
+    }
+
+    .brand { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .logo {
+      width: 40px; height: 40px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--green));
+      display: grid; place-items: center;
+      color: white; font-weight: 800; letter-spacing: 0.5px;
+      user-select: none;
+      flex: 0 0 auto;
+    }
+    .brandHead { flex: 1 1 auto; min-width: 0; }
+    .brand h1 { font-size: 16px; margin: 0; line-height: 1.1; }
+    .brand p { margin: 3px 0 0 0; font-size: 12px; color: var(--muted); }
+
+    .themeToggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--btnBorder);
+      background: var(--btnBg);
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      flex: 0 0 auto;
+    }
+    .switch {
+      width: 42px;
+      height: 24px;
+      border-radius: 999px;
+      background: rgba(148,163,184,0.45);
+      position: relative;
+      border: 1px solid var(--btnBorder);
+      transition: background 0.2s ease;
+    }
+    .knob {
+      width: 18px; height: 18px;
+      border-radius: 999px;
+      background: #ffffff;
+      position: absolute;
+      top: 50%;
+      left: 3px;
+      transform: translateY(-50%);
+      transition: left 0.2s ease;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+    }
+    body.dark .switch { background: rgba(37,99,235,0.55); }
+    body.dark .knob { left: 21px; }
+
+    .steps { display: grid; gap: 10px; margin-top: 10px; }
+
+    .step {
+      border: 1px solid rgba(0,0,0,0.06);
+      border-radius: 14px;
+      padding: 10px;
+      background: var(--cardBg);
+    }
+    body.dark .step { border-color: rgba(255,255,255,0.08); }
+
+    .step-title {
+      display: flex; align-items: center; gap: 8px;
+      font-weight: 700; font-size: 13px; margin-bottom: 8px;
+    }
+
+    .badge {
+      font-size: 11px; font-weight: 700;
+      padding: 4px 8px; border-radius: 999px;
+      background: rgba(37,99,235,0.10);
+      color: #1d4ed8;
+      border: 1px solid rgba(37,99,235,0.15);
+    }
+    body.dark .badge{
+      background: rgba(37,99,235,0.18);
+      border-color: rgba(37,99,235,0.25);
+      color: #bfdbfe;
+    }
+
+    .row { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .kv { display: grid; gap: 3px; min-width: 160px; }
+    .k { font-size: 11px; color: var(--muted); }
+    .v { font-size: 14px; font-weight: 700; }
+
+    input[type="date"]{
+      width: 100%;
+      max-width: 100%;
+      padding: 10px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.10);
+      outline: none;
+      font-size: 13px;
+      background: rgba(255,255,255,0.95);
+      color: #0f172a;
+      box-sizing: border-box;
+    }
+    body.dark input[type="date"]{
+      border-color: rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      color-scheme: dark;
+    }
+    input[type="date"]:focus{
+      border-color: rgba(37,99,235,0.45);
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+    }
+
+    .btnRow{ display:flex; gap:10px; margin-top: 10px; }
+    button{
+      border: none;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.05s ease, box-shadow 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+      user-select: none;
+    }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .btnPrimary{
+      flex: 1;
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+      color: white;
+      box-shadow: 0 10px 24px rgba(37,99,235,0.25);
+    }
+    .btnGhost{
+      flex: 1;
+      background: rgba(15,23,42,0.06);
+      color: var(--text);
+      border: 1px solid var(--btnBorder);
+    }
+    body.dark .btnGhost{ background: rgba(255,255,255,0.06); }
+
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--statusBg);
+      border: 1px dashed var(--statusBorder);
+      line-height: 1.35;
+      min-height: 18px;
+    }
+
+    .pill {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid var(--btnBorder);
+      background: rgba(255,255,255,0.7);
+      color: var(--text);
+    }
+    body.dark .pill{ background: rgba(255,255,255,0.05); }
+
+    .dot { width: 9px; height: 9px; border-radius: 999px; background: #94a3b8; }
+    .dot.success{ background: var(--success); }
+    .dot.warn{ background: var(--warning); }
+    .dot.danger{ background: var(--danger); }
+
+    .toolsGrid{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .toolBtn{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap: 8px;
+      padding: 10px 10px;
+      border-radius: 12px;
+      background: var(--btnBg);
+      border: 1px solid var(--btnBorder);
+      color: var(--text);
+    }
+    .toolBtn svg{ width: 16px; height: 16px; }
+    .toolBtn.active{
+      background: rgba(34,197,94,0.14);
+      border-color: rgba(34,197,94,0.30);
+      color: #065f46;
+    }
+    body.dark .toolBtn.active{ color: #bbf7d0; }
+
+    .toolBtn.danger{
+      background: rgba(239,68,68,0.08);
+      border-color: rgba(239,68,68,0.20);
+      color: #7f1d1d;
+    }
+    body.dark .toolBtn.danger{ color: #fecaca; }
+
+    .toolHint{
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .searchRow{
+      margin: 8px 0 10px 0;
+      position: relative;
+    }
+
+    .searchWrap{
+      display:flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .searchInput{
+      flex: 1;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.10);
+      outline: none;
+      font-size: 13px;
+      background: rgba(255,255,255,0.95);
+      color: #0f172a;
+    }
+
+    body.dark .searchInput{
+      border-color: rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+    }
+
+    .searchInput:focus{
+      border-color: rgba(37,99,235,0.45);
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+    }
+
+    .searchBtn{
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--btnBorder);
+      background: var(--btnBg);
+      color: var(--text);
+      font-weight: 800;
+    }
+
+    .searchResults{
+      position: absolute;
+      top: 46px;
+      left: 0;
+      right: 0;
+      background: var(--panel);
+      border: 1px solid var(--panelBorder);
+      border-radius: 12px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.18);
+      overflow: hidden;
+      display: none;
+      max-height: 220px;
+      z-index: 2000;
+    }
+
+    .searchItem{
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+
+    body.dark .searchItem{
+      border-bottom-color: rgba(255,255,255,0.08);
+    }
+
+    .searchItem:hover{
+      background: rgba(37,99,235,0.08);
+    }
+
+    .searchMuted{
+      margin-top: 2px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .legend {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      z-index: 999;
+      background: var(--legendBg);
+      border: 1px solid var(--legendBorder);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 10px 12px;
+      width: 260px;
+      backdrop-filter: blur(8px);
+      display:none;
+      color: var(--text);
+    }
+    .legend h3{ margin: 0 0 8px 0; font-size: 12px; letter-spacing: 0.2px; }
+    .gradBar{
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg,
+        #2c7bb6 0%,
+        #abd9e9 25%,
+        #ffffbf 50%,
+        #fdae61 75%,
+        #d7191c 100%
+      );
+      border: 1px solid rgba(0,0,0,0.12);
+    }
+    body.dark .gradBar{ border-color: rgba(255,255,255,0.16); }
+    .legendRow{
+      display:flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .spinner{
+      width: 14px; height: 14px;
+      border-radius: 999px;
+      border: 2px solid rgba(0,0,0,0.15);
+      border-top-color: rgba(37,99,235,0.9);
+      display: inline-block;
+      animation: spin 0.9s linear infinite;
+      vertical-align: -2px;
+      margin-right: 8px;
+    }
+    body.dark .spinner{
+      border-color: rgba(255,255,255,0.18);
+      border-top-color: rgba(147,197,253,0.95);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .leaflet-control-zoom { display: none !important; }
+    .leaflet-draw { display: none !important; }
+
+    @media (max-width: 520px){
+      .panel{ width: calc(100% - 32px); }
+      .toolsGrid{ grid-template-columns: 1fr; }
+      .themeToggle{ width: 100%; justify-content: space-between; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="app">
+  <div id="map"></div>
+
+  <div class="panel">
+    <div class="brand">
+      <div class="logo">SOC</div>
+
+      <div class="brandHead">
+        <h1>Soil Organic Carbon Stock</h1>
+        <p>Draw your field → select date → generate SOC map (t/ha).</p>
+      </div>
+
+      <button class="themeToggle" id="themeToggle" type="button" title="Toggle dark mode">
+        <span id="themeLabel">Dark</span>
+        <span class="switch" aria-hidden="true"><span class="knob"></span></span>
+      </button>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-title"><span class="badge">Map tools</span> Controls</div>
+
+        <div class="searchRow">
+          <div class="searchWrap">
+            <input
+              id="locSearch"
+              class="searchInput"
+              type="text"
+              placeholder="Search city / place (e.g., Mumbai, Indore, Jaipur)"
+              autocomplete="off"
+            />
+            <button class="searchBtn" id="btnSearchGo" type="button" title="Go to location">Go</button>
+          </div>
+
+          <div id="searchResults" class="searchResults"></div>
+        </div>
+
+        <div class="toolsGrid">
+          <button class="toolBtn" id="btnZoomIn" type="button" title="Zoom in">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Zoom in
+          </button>
+
+          <button class="toolBtn" id="btnZoomOut" type="button" title="Zoom out">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Zoom out
+          </button>
+
+          <button class="toolBtn" id="btnDraw" type="button" title="Draw polygon">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M7 3h4l-1 4H6l1-4ZM14 7h4l-1 4h-4l1-4ZM6 17h4l-1 4H5l1-4ZM14 17h4l-1 4h-4l1-4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            Draw polygon
+          </button>
+
+          <button class="toolBtn" id="btnEdit" type="button" title="Edit polygon (toggle)">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            Edit polygon
+          </button>
+
+          <button class="toolBtn danger" id="btnDelete" type="button" title="Delete polygon (toggle)">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 6V4h8v2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 6l1 16h10l1-16" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Delete
+          </button>
+
+          <button class="toolBtn" id="btnFit" type="button" title="Fit to polygon">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M9 3H3v6M15 3h6v6M9 21H3v-6M21 21h-6v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Fit to field
+          </button>
+        </div>
+
+        <div class="toolHint">
+          Tip: Click <b>Draw polygon</b> then draw your field on the map. Use <b>Edit</b> to adjust vertices. Use <b>Delete</b> to remove.
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-title"><span class="badge">Step 1</span> Field polygon</div>
+        <div class="row">
+          <div class="kv">
+            <div class="k">Polygon area</div>
+            <div class="v" id="areaDisplay">–</div>
+          </div>
+          <div class="pill" title="Polygon status">
+            <span class="dot warn" id="polyDot"></span>
+            <span id="polyStatus">No polygon</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-title"><span class="badge">Step 2</span> Select date</div>
+        <input type="date" id="dateInput" />
+      </div>
+
+      <div class="step">
+        <div class="step-title"><span class="badge">Step 3</span> Run SOC mapping</div>
+
+        <div class="btnRow">
+          <button class="btnPrimary" onclick="submitData()">Calculate SOC</button>
+          <button class="btnGhost" onclick="clearAll()">Clear</button>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="kv">
+            <div class="k">Farm SOC stock (mean)</div>
+            <div class="v" id="farmStock">–</div>
+          </div>
+          <div class="pill">
+            <span class="dot" id="statusDot"></span>
+            <span id="statusShort">Idle</span>
+          </div>
+        </div>
+
+        <div class="status" id="status">
+          Use the panel tools to draw a polygon, then choose a date and run the model.
+        </div>
+
+        <div style="margin-top:12px;">
+          <div class="k" style="margin-bottom:6px;">Last 12 months SOC stock (mean)</div>
+          <div id="chartWrap" style="position:relative;height:220px;display:none;">
+            <canvas id="socChart"></canvas>
+          </div>
+          <div id="chartEmpty" class="toolHint" style="display:none;">
+            Monthly time series unavailable.
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="legend" id="legendBox">
+    <h3>SOC stock (t/ha)</h3>
+    <div class="gradBar"></div>
+    <div class="legendRow">
+      <div>Min: <span id="minVal">–</span></div>
+      <div>Max: <span id="maxVal">–</span></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+<script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  // ============================
+  // CONFIG
+  // ============================
+  const API_URL = "http://127.0.0.1:8070/predict_soc";
+
+  // Surface smoothing tuned for ~10 m grid points
+  // If you want it even smoother:
+  //   - increase SMOOTH_FACTOR (e.g., 2.5)
+  //   - decrease IDW_POWER (e.g., 1.2)
+  //   - increase BLUR_FACTOR (e.g., 0.40)
+  const SURFACE = {
+    DEFAULT_GRID_M: 10,      // expected grid spacing ~10m
+    PX_PER_CELL: 4,          // raster resolution relative to grid (4 px per 10m cell)
+    MAX_CANVAS: 1100,        // cap to keep it fast
+    IDW_POWER: 2.75,         // lower = smoother (vs 2.0)
+    SMOOTH_FACTOR: 0.75,      // smoothing length = grid * factor (here ~20m)
+    BIN_FACTOR: 3.0,         // spatial bin size = smooth * factor
+    BLUR_FACTOR: 0.2,       // blur in px = pxPerCell * factor
+    BLUR_MIN: 1.0,
+    BLUR_MAX: 3.0,
+    OVERLAY_OPACITY: 0.78
+  };
+
+  const COLOR_STOPS = [
+    {t: 0.00, c: "#2c7bb6"},
+    {t: 0.25, c: "#abd9e9"},
+    {t: 0.50, c: "#ffffbf"},
+    {t: 0.75, c: "#fdae61"},
+    {t: 1.00, c: "#d7191c"},
+  ];
+
+  // ============================
+  // THEME TOGGLE (persist)
+  // ============================
+  function applyTheme(mode){
+    const isDark = (mode === "dark");
+    document.body.classList.toggle("dark", isDark);
+    document.getElementById("themeLabel").innerText = isDark ? "Light" : "Dark";
+    localStorage.setItem("soc_theme", isDark ? "dark" : "light");
+  }
+  (function initTheme(){
+    const saved = localStorage.getItem("soc_theme");
+    if (saved === "dark") applyTheme("dark");
+    else applyTheme("light");
+  })();
+  document.getElementById("themeToggle").addEventListener("click", () => {
+    const nowDark = document.body.classList.contains("dark");
+    applyTheme(nowDark ? "light" : "dark");
+  });
+
+  // ============================
+  // STATE
+  // ============================
+  let currentPolygon = null;
+  let currentPolygonLayer = null;
+  let rasterOverlay = null;
+
+  let polygonDrawer = null;
+  let editHandler = null;
+  let deleteHandler = null;
+
+  let socChart = null;
+  // ============================
+  // Helpers
+  // ============================
+  function fmt(x, d=2){
+    if (!isFinite(x)) return "–";
+    return Number(x).toFixed(d);
+  }
+  function setDot(el, kind){
+    el.className = "dot";
+    if (kind === "ok") el.classList.add("success");
+    if (kind === "warn") el.classList.add("warn");
+    if (kind === "err") el.classList.add("danger");
+  }
+  function setStatus(kind, shortText, longText){
+    const dot = document.getElementById("statusDot");
+    const sShort = document.getElementById("statusShort");
+    const s = document.getElementById("status");
+    setDot(dot, kind);
+    sShort.innerText = shortText || "—";
+    s.innerHTML = longText || "";
+  }
+  function setPolyStatus(hasPoly){
+    const dot = document.getElementById("polyDot");
+    const txt = document.getElementById("polyStatus");
+    if (hasPoly){
+      setDot(dot, "ok");
+      txt.innerText = "Polygon ready";
+    } else {
+      setDot(dot, "warn");
+      txt.innerText = "No polygon";
+    }
+  }
+  function setButtonActive(btn, active){ btn.classList.toggle("active", !!active); }
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function disableModes(){
+    try { if (polygonDrawer && polygonDrawer.enabled()) polygonDrawer.disable(); } catch(e){}
+    try { if (editHandler && editHandler.enabled()) editHandler.disable(); } catch(e){}
+    try { if (deleteHandler && deleteHandler.enabled()) deleteHandler.disable(); } catch(e){}
+    setButtonActive(document.getElementById("btnDraw"), false);
+    setButtonActive(document.getElementById("btnEdit"), false);
+    setButtonActive(document.getElementById("btnDelete"), false);
+  }
+
+  // ============================
+  // Color helpers
+  // ============================
+  function hexToRgb(hex){
+    const h = hex.replace("#","");
+    const v = parseInt(h,16);
+    return {r:(v>>16)&255, g:(v>>8)&255, b:v&255};
+  }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function lerpColor(c1,c2,t){
+    const A = hexToRgb(c1), B = hexToRgb(c2);
+    return { r: Math.round(lerp(A.r,B.r,t)), g: Math.round(lerp(A.g,B.g,t)), b: Math.round(lerp(A.b,B.b,t)) };
+  }
+  function colorForValue(value, min, max){
+    if (!isFinite(value) || !isFinite(min) || !isFinite(max) || max <= min) return {r: 160, g: 160, b: 160};
+    const x = Math.min(1, Math.max(0, (value - min) / (max - min)));
+    let i = 0;
+    while (i < COLOR_STOPS.length-1 && x > COLOR_STOPS[i+1].t) i++;
+    const s0 = COLOR_STOPS[i], s1 = COLOR_STOPS[Math.min(i+1, COLOR_STOPS.length-1)];
+    const tt = (x - s0.t) / Math.max(1e-12, (s1.t - s0.t));
+    return lerpColor(s0.c, s1.c, tt);
+  }
+
+  // Default date = today
+  (function setDefaultDate(){
+    const el = document.getElementById("dateInput");
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth()+1).padStart(2,"0");
+    const dd = String(today.getDate()).padStart(2,"0");
+    el.value = `${yyyy}-${mm}-${dd}`;
+  })();
+
+  // ============================
+  // MAP INIT
+  // ============================
+  const map = L.map('map', { zoomControl: false }).setView([23.4, 75.8], 15);
+
+  L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { attribution: 'Tiles © Esri' }
+  ).addTo(map);
+
+  // ============================
+  // LOCATION SEARCH (Nominatim)
+  // ============================
+  let searchMarker = null;
+  const locInput = document.getElementById("locSearch");
+  const locGoBtn = document.getElementById("btnSearchGo");
+  const locResults = document.getElementById("searchResults");
+
+  let searchTimer = null;
+  let lastController = null;
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function hideLocResults(){
+    locResults.style.display = "none";
+    locResults.innerHTML = "";
+  }
+
+  function showLocResults(list){
+    if (!list || !list.length){
+      hideLocResults();
+      return;
+    }
+    locResults.innerHTML = list.map((it, idx) => {
+      const name = escapeHtml(it.display_name || "Unknown place");
+      const type = escapeHtml(`${it.type || ""}${it.class ? " • " + it.class : ""}`.trim());
+      return `
+        <div class="searchItem" data-idx="${idx}">
+          <div>${name}</div>
+          <div class="searchMuted">${type}</div>
+        </div>
+      `;
+    }).join("");
+    locResults.style.display = "block";
+  }
+
+  async function nominatimSearch(q, signal){
+    const url =
+      `https://nominatim.openstreetmap.org/search?format=json&limit=6&addressdetails=1&q=${encodeURIComponent(q)}`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+      signal
+    });
+    if (!res.ok) throw new Error(`Geocoder error (${res.status})`);
+    return await res.json();
+  }
+
+  function gotoPlace(item){
+    const lat = parseFloat(item.lat);
+    const lon = parseFloat(item.lon);
+    if (!isFinite(lat) || !isFinite(lon)) return;
+
+    // Zoom heuristic: cities ~12-13, precise places ~15
+    const z = (item.type && String(item.type).toLowerCase().includes("city")) ? 12 : 14;
+
+    map.flyTo([lat, lon], z, { duration: 1.2 });
+
+    if (searchMarker) map.removeLayer(searchMarker);
+    searchMarker = L.marker([lat, lon]).addTo(map)
+      .bindPopup(escapeHtml(item.display_name || "Selected location"))
+      .openPopup();
+
+    hideLocResults();
+    setStatus("ok", "Moved", `Moved to <b>${escapeHtml(item.display_name || "location")}</b>.`);
+  }
+
+  async function runSearchAndShow(){
+    const q = locInput.value.trim();
+    if (q.length < 3){
+      hideLocResults();
+      return;
+    }
+
+    try{
+      if (lastController) lastController.abort();
+      lastController = new AbortController();
+
+      const data = await nominatimSearch(q, lastController.signal);
+      // Keep latest results attached to the element for click handler
+      locResults._data = data || [];
+      showLocResults(locResults._data);
+    } catch(e){
+      // Ignore aborts; show real errors
+      if (String(e.name).toLowerCase() !== "aborterror"){
+        hideLocResults();
+        setStatus("err", "Search failed", `Location search failed: ${escapeHtml(e.message || e)}`);
+      }
+    }
+  }
+
+  // Debounced suggestions on typing
+  locInput.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(runSearchAndShow, 350); // gentle on geocoder
+  });
+
+  // Enter key: go to first result (or fetch and then go)
+  locInput.addEventListener("keydown", async (e) => {
+    if (e.key === "Enter"){
+      e.preventDefault();
+      const q = locInput.value.trim();
+      if (q.length < 3) return;
+
+      // If dropdown already has results, go to first
+      const existing = locResults._data;
+      if (existing && existing.length){
+        gotoPlace(existing[0]);
+        return;
+      }
+
+      // Otherwise fetch then go
+      try{
+        if (lastController) lastController.abort();
+        lastController = new AbortController();
+        const data = await nominatimSearch(q, lastController.signal);
+        if (data && data.length) gotoPlace(data[0]);
+        else setStatus("warn", "No results", "No matching place found. Try a broader query.");
+      } catch(e){
+        if (String(e.name).toLowerCase() !== "aborterror"){
+          setStatus("err", "Search failed", `Location search failed: ${escapeHtml(e.message || e)}`);
+        }
+      }
+    }
+  });
+
+  // Go button: go to first result (or fetch and then go)
+  locGoBtn.addEventListener("click", async () => {
+    const q = locInput.value.trim();
+    if (q.length < 3){
+      setStatus("warn", "Type more", "Type at least 3 characters to search.");
+      return;
+    }
+
+    const existing = locResults._data;
+    if (existing && existing.length){
+      gotoPlace(existing[0]);
+      return;
+    }
+
+    try{
+      if (lastController) lastController.abort();
+      lastController = new AbortController();
+      const data = await nominatimSearch(q, lastController.signal);
+      if (data && data.length) gotoPlace(data[0]);
+      else setStatus("warn", "No results", "No matching place found. Try a broader query.");
+    } catch(e){
+      if (String(e.name).toLowerCase() !== "aborterror"){
+        setStatus("err", "Search failed", `Location search failed: ${escapeHtml(e.message || e)}`);
+      }
+    }
+  });
+
+  // Click on a dropdown item
+  locResults.addEventListener("click", (e) => {
+    const itemEl = e.target.closest(".searchItem");
+    if (!itemEl) return;
+    const idx = parseInt(itemEl.getAttribute("data-idx"), 10);
+    const data = locResults._data || [];
+    if (isFinite(idx) && data[idx]) gotoPlace(data[idx]);
+  });
+
+  // Hide dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".searchRow")) hideLocResults();
+  });
+
+
+
+  const drawnItems = new L.FeatureGroup().addTo(map);
+
+  polygonDrawer = new L.Draw.Polygon(map, {
+    allowIntersection: false,
+    showArea: true,
+    shapeOptions: { color: "#22c55e", weight: 3, fillOpacity: 0.02 }
+  });
+
+  editHandler = new L.EditToolbar.Edit(map, {
+    featureGroup: drawnItems,
+    selectedPathOptions: { maintainColor: true, opacity: 0.9 }
+  });
+
+  deleteHandler = new L.EditToolbar.Delete(map, { featureGroup: drawnItems });
+
+  // Panel controls
+  document.getElementById("btnZoomIn").addEventListener("click", () => map.zoomIn());
+  document.getElementById("btnZoomOut").addEventListener("click", () => map.zoomOut());
+
+  document.getElementById("btnDraw").addEventListener("click", () => {
+    disableModes();
+    setButtonActive(document.getElementById("btnDraw"), true);
+    polygonDrawer.enable();
+    setStatus("warn", "Draw", "Click on the map to place vertices. Double-click to finish the polygon.");
+  });
+
+  document.getElementById("btnEdit").addEventListener("click", () => {
+    if (!currentPolygonLayer){
+      setStatus("err", "No polygon", "Draw a polygon first, then you can edit it.");
+      return;
+    }
+    const btn = document.getElementById("btnEdit");
+    const isOn = editHandler.enabled();
+    disableModes();
+    if (!isOn){
+      editHandler.enable();
+      setButtonActive(btn, true);
+      setStatus("warn", "Edit", "Drag vertices to adjust. Click <b>Edit polygon</b> again to finish.");
+    } else {
+      editHandler.disable();
+      setButtonActive(btn, false);
+      setStatus("ok", "Ready", "Polygon updated. Run <b>Calculate SOC</b> again.");
+    }
+  });
+
+  document.getElementById("btnDelete").addEventListener("click", () => {
+    if (!currentPolygonLayer){
+      setStatus("err", "No polygon", "Draw a polygon first, then you can delete it.");
+      return;
+    }
+    const btn = document.getElementById("btnDelete");
+    const isOn = deleteHandler.enabled();
+    disableModes();
+    if (!isOn){
+      deleteHandler.enable();
+      setButtonActive(btn, true);
+      setStatus("warn", "Delete", "Click the polygon to delete it. Click <b>Delete</b> again to exit.");
+    } else {
+      deleteHandler.disable();
+      setButtonActive(btn, false);
+      setStatus("ok", "Ready", "Delete mode off.");
+    }
+  });
+
+  document.getElementById("btnFit").addEventListener("click", () => {
+    if (currentPolygonLayer){
+      try { map.fitBounds(currentPolygonLayer.getBounds(), { padding: [20,20] }); } catch(e){}
+    } else {
+      setStatus("warn", "Tip", "Draw a polygon first, then you can fit the view to it.");
+    }
+  });
+
+  // Draw/Edit/Delete events
+  map.on(L.Draw.Event.CREATED, function (event) {
+    const layer = event.layer;
+
+    drawnItems.clearLayers();
+    drawnItems.addLayer(layer);
+
+    currentPolygonLayer = layer;
+    currentPolygon = layer.toGeoJSON();
+
+    if (rasterOverlay){
+      map.removeLayer(rasterOverlay);
+      rasterOverlay = null;
+    }
+    document.getElementById("legendBox").style.display = "none";
+    document.getElementById("farmStock").innerText = "–";
+
+    const areaSqMeters = turf.area(currentPolygon);
+    const areaHectares = areaSqMeters / 10000;
+    document.getElementById('areaDisplay').innerText = `${fmt(areaHectares, 2)} ha`;
+
+    setPolyStatus(true);
+
+    try { map.fitBounds(layer.getBounds(), { padding: [20,20] }); } catch(e){}
+
+    try { if (polygonDrawer.enabled()) polygonDrawer.disable(); } catch(e){}
+    setButtonActive(document.getElementById("btnDraw"), false);
+
+    setStatus("ok", "Ready", "Polygon captured. Select a date and click <b>Calculate SOC</b>.");
+  });
+
+  map.on(L.Draw.Event.EDITED, function () {
+    const layers = drawnItems.getLayers();
+    if (layers.length){
+      currentPolygonLayer = layers[0];
+      currentPolygon = currentPolygonLayer.toGeoJSON();
+
+      const areaSqMeters = turf.area(currentPolygon);
+      const areaHectares = areaSqMeters / 10000;
+      document.getElementById('areaDisplay').innerText = `${fmt(areaHectares, 2)} ha`;
+    }
+
+    if (rasterOverlay){
+      map.removeLayer(rasterOverlay);
+      rasterOverlay = null;
+    }
+    document.getElementById("legendBox").style.display = "none";
+    document.getElementById("farmStock").innerText = "–";
+
+    setStatus("ok", "Updated", "Polygon edited. Run <b>Calculate SOC</b> again to refresh the map.");
+  });
+
+  map.on(L.Draw.Event.DELETED, function () {
+    clearAll();
+  });
+
+  // ============================
+  // IDW Gradient Raster (smoothed for ~10m grid)
+  // ============================
+  function lonLatToMetersFactory(lat0, lon0){
+    const R = 6378137;
+    const cosLat0 = Math.cos(lat0 * Math.PI / 180);
+    return function(lon, lat){
+      const x = (lon - lon0) * (Math.PI/180) * R * cosLat0;
+      const y = (lat - lat0) * (Math.PI/180) * R;
+      return {x, y};
+    };
+  }
+
+  function polygonToCanvasPath(ctx, polygonGeoJSON, minLon, maxLon, minLat, maxLat, W, H){
+    const g = polygonGeoJSON?.geometry;
+    if (!g) return false;
+
+    function toXY(lon, lat){
+      const x = (lon - minLon) / (maxLon - minLon) * W;
+      const y = (maxLat - lat) / (maxLat - minLat) * H;
+      return {x, y};
+    }
+    function drawRing(ring){
+      ring.forEach((pt, i) => {
+        const lon = pt[0], lat = pt[1];
+        const p = toXY(lon, lat);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+    }
+
+    ctx.beginPath();
+    if (g.type === "Polygon"){
+      (g.coordinates || []).forEach(drawRing);
+      return true;
+    }
+    if (g.type === "MultiPolygon"){
+      (g.coordinates || []).forEach(poly => (poly || []).forEach(drawRing));
+      return true;
+    }
+    return false;
+  }
+
+  function median(arr){
+    if (!arr.length) return NaN;
+    const a = arr.slice().sort((x,y)=>x-y);
+    const m = Math.floor(a.length/2);
+    return (a.length % 2) ? a[m] : 0.5*(a[m-1] + a[m]);
+  }
+
+  // Estimate grid spacing from points (should return ~10m if your grid is 10m)
+  function estimateGridSpacingMeters(ptsM, fallback=10){
+    if (!ptsM || ptsM.length < 10) return fallback;
+
+    // Quantize to reduce float noise
+    const xq = ptsM.map(p => Math.round(p.x*10)/10); // 0.1 m
+    const yq = ptsM.map(p => Math.round(p.y*10)/10);
+
+    const ux = Array.from(new Set(xq)).sort((a,b)=>a-b);
+    const uy = Array.from(new Set(yq)).sort((a,b)=>a-b);
+
+    function diffs(u){
+      const d = [];
+      for (let i=1;i<u.length;i++){
+        const dd = u[i]-u[i-1];
+        if (dd > 0.5) d.push(dd); // ignore tiny noise
+      }
+      // Take smallest diffs (these represent grid step)
+      d.sort((a,b)=>a-b);
+      return d.slice(0, Math.min(300, d.length));
+    }
+
+    const dx = diffs(ux);
+    const dy = diffs(uy);
+
+    const step = median(dx.concat(dy));
+    if (!isFinite(step) || step <= 0) return fallback;
+
+    // Clamp to a sane range
+    return clamp(step, 5, 30);
+  }
+
+  // Build a spatial bin index to avoid harsh, point-dominated spikes
+  function buildBins(points, binSize){
+    const bins = new Map();
+    const inv = 1.0 / Math.max(1e-9, binSize);
+    const key = (ix,iy)=>`${ix},${iy}`;
+
+    for (const p of points){
+      const ix = Math.floor(p.x * inv);
+      const iy = Math.floor(p.y * inv);
+      const k = key(ix,iy);
+      if (!bins.has(k)) bins.set(k, []);
+      bins.get(k).push(p);
+    }
+    return {bins, inv, key};
+  }
+
+  function queryBins(index, x, y, ring=1){
+    const ix0 = Math.floor(x * index.inv);
+    const iy0 = Math.floor(y * index.inv);
+    const out = [];
+    for (let dy=-ring; dy<=ring; dy++){
+      for (let dx=-ring; dx<=ring; dx++){
+        const k = index.key(ix0+dx, iy0+dy);
+        const a = index.bins.get(k);
+        if (a) out.push(...a);
+      }
+    }
+    return out;
+  }
+
+  function buildSmoothedOverlay(pixels, polygonGeoJSON, minV, maxV){
+    const lons = pixels.map(p => p.long);
+    const lats = pixels.map(p => p.lat);
+    let minLon = Math.min(...lons), maxLon = Math.max(...lons);
+    let minLat = Math.min(...lats), maxLat = Math.max(...lats);
+
+    const padLon = (maxLon - minLon) * 0.02 || 1e-6;
+    const padLat = (maxLat - minLat) * 0.02 || 1e-6;
+    minLon -= padLon; maxLon += padLon;
+    minLat -= padLat; maxLat += padLat;
+
+    const lat0 = (minLat + maxLat) / 2;
+    const lon0 = (minLon + maxLon) / 2;
+    const toM = lonLatToMetersFactory(lat0, lon0);
+
+    // Convert points to meters
+    let ptsM = pixels.map(p => {
+      const m = toM(p.long, p.lat);
+      return {x:m.x, y:m.y, v:p.soc_stock};
+    });
+
+    // If huge, sub-sample slightly (still smooth due to larger smoothing length)
+    if (ptsM.length > 15000){
+      const step = Math.ceil(ptsM.length / 10000);
+      const tmp = [];
+      for (let i=0;i<ptsM.length;i+=step) tmp.push(ptsM[i]);
+      ptsM = tmp;
+    }
+
+    const gridM = estimateGridSpacingMeters(ptsM, SURFACE.DEFAULT_GRID_M);   // ~10m
+    const smoothM = gridM * SURFACE.SMOOTH_FACTOR;                           // ~20m
+    const power = SURFACE.IDW_POWER;
+
+    // Compute bbox size in meters to set canvas size based on grid spacing
+    const widthM  = Math.abs(toM(maxLon, lat0).x - toM(minLon, lat0).x);
+    const heightM = Math.abs(toM(lon0, maxLat).y - toM(lon0, minLat).y);
+
+    let W = Math.round((widthM  / gridM) * SURFACE.PX_PER_CELL);
+    let H = Math.round((heightM / gridM) * SURFACE.PX_PER_CELL);
+
+    const scale = Math.min(1, SURFACE.MAX_CANVAS / Math.max(W, H));
+    W = clamp(Math.round(W * scale), 320, SURFACE.MAX_CANVAS);
+    H = clamp(Math.round(H * scale), 320, SURFACE.MAX_CANVAS);
+
+    // Bin index (local neighborhood -> removes point-spike look)
+    const binSize = Math.max(1.0, smoothM * SURFACE.BIN_FACTOR);
+    const idx = buildBins(ptsM, binSize);
+
+    const raw = document.createElement("canvas");
+    raw.width = W; raw.height = H;
+    const rctx = raw.getContext("2d");
+    const img = rctx.createImageData(W, H);
+
+    const s2 = smoothM * smoothM;
+    const pHalf = power / 2;
+    const EPS = 1e-12;
+
+    for (let j=0; j<H; j++){
+      const lat = maxLat - (j + 0.5) / H * (maxLat - minLat);
+      for (let i=0; i<W; i++){
+        const lon = minLon + (i + 0.5) / W * (maxLon - minLon);
+        const m = toM(lon, lat);
+
+        // Local points (expand rings if needed)
+        let neigh = queryBins(idx, m.x, m.y, 1);
+        if (neigh.length < 6) neigh = neigh.concat(queryBins(idx, m.x, m.y, 2));
+        if (neigh.length < 6) neigh = ptsM; // fallback (rare)
+
+        let num = 0, den = 0;
+
+        for (let k=0; k<neigh.length; k++){
+          const dx = m.x - neigh[k].x;
+          const dy = m.y - neigh[k].y;
+          const d2 = dx*dx + dy*dy;
+
+          // Smoothed IDW: d2 + s2 prevents spikes at sample points
+          const w = 1.0 / Math.pow(d2 + s2, pHalf);
+          num += w * neigh[k].v;
+          den += w;
+        }
+
+        const val = num / Math.max(EPS, den);
+        const col = colorForValue(val, minV, maxV);
+
+        const idxPx = (j * W + i) * 4;
+        img.data[idxPx]   = col.r;
+        img.data[idxPx+1] = col.g;
+        img.data[idxPx+2] = col.b;
+        img.data[idxPx+3] = 255;
+      }
+    }
+    rctx.putImageData(img, 0, 0);
+
+    // Light blur in pixel space (removes remaining micro-contrast)
+    const pxPerMeter = W / Math.max(1e-9, widthM);
+    const pxPerCell = gridM * pxPerMeter; // ~ how many pixels correspond to 10m
+    const blurPx = clamp(pxPerCell * SURFACE.BLUR_FACTOR, SURFACE.BLUR_MIN, SURFACE.BLUR_MAX);
+
+    const sm = document.createElement("canvas");
+    sm.width = W; sm.height = H;
+    const sctx = sm.getContext("2d");
+    sctx.imageSmoothingEnabled = true;
+    sctx.filter = `blur(${blurPx.toFixed(2)}px)`;
+    sctx.drawImage(raw, 0, 0);
+    sctx.filter = "none";
+
+    // Clip to polygon
+    sctx.globalCompositeOperation = "destination-in";
+    sctx.fillStyle = "rgba(0,0,0,1)";
+    const ok = polygonToCanvasPath(sctx, polygonGeoJSON, minLon, maxLon, minLat, maxLat, W, H);
+    if (ok){
+      try { sctx.fill("evenodd"); } catch(e){ sctx.fill(); }
+    }
+    sctx.globalCompositeOperation = "source-over";
+
+    return {
+      dataUrl: sm.toDataURL("image/png"),
+      bounds: [[minLat, minLon], [maxLat, maxLon]]
+    };
+  }
+
+  function renderGradientOverlay(pixels, polygonGeoJSON, minV, maxV){
+    const raster = buildSmoothedOverlay(pixels, polygonGeoJSON, minV, maxV);
+    if (!raster) return;
+
+    if (rasterOverlay){
+      map.removeLayer(rasterOverlay);
+      rasterOverlay = null;
+    }
+
+    rasterOverlay = L.imageOverlay(raster.dataUrl, raster.bounds, {
+      opacity: SURFACE.OVERLAY_OPACITY,
+      interactive: false
+    }).addTo(map);
+
+    if (currentPolygonLayer && currentPolygonLayer.bringToFront){
+      currentPolygonLayer.bringToFront();
+    }
+  }
+//==============================================================================
+
+  function renderTimeSeriesChart(series){
+    const wrap = document.getElementById("chartWrap");
+    const empty = document.getElementById("chartEmpty");
+    const canvas = document.getElementById("socChart");
+
+    if (socChart){
+      socChart.destroy();
+      socChart = null;
+    }
+
+    const clean = (series || []).filter(x => x && (x.label || x.month || x.date));
+    const labels = clean.map(x => x.label || x.month || x.date);
+    const data = clean.map(x => (typeof x.soc_stock_mean === "number" ? x.soc_stock_mean : null));
+
+    const hasAny = data.some(v => typeof v === "number" && isFinite(v));
+
+    if (!hasAny){
+      wrap.style.display = "none";
+      empty.style.display = "block";
+      return;
+    }
+
+    wrap.style.display = "block";
+    empty.style.display = "none";
+
+    const isDark = document.body.classList.contains("dark");
+    const textColor = isDark ? "#e5e7eb" : "#0f172a";
+    const gridColor = isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)";
+
+    socChart = new Chart(canvas.getContext("2d"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "SOC stock (t/ha)",
+          data,
+          tension: 0.25,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: {
+            display: true,
+            labels: { color: textColor }
+          },
+          tooltip: {
+            callbacks: {
+              title: (items) => {
+                const idx = items[0]?.dataIndex ?? 0;
+                const row = clean[idx];
+                if (!row) return labels[idx] || "";
+                const s = row.start_date || "";
+                const e = row.end_date || "";
+                return s && e ? `${row.label} (${s} to ${e})` : (row.label || labels[idx] || "");
+              },
+              label: (ctx) => {
+                const v = ctx.parsed.y;
+                return (v == null || !isFinite(v)) ? "No data" : `${v.toFixed(2)} t/ha`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: textColor },
+            grid: { color: gridColor }
+          },
+          y: {
+            title: {
+              display: true,
+              text: "t/ha",
+              color: textColor
+            },
+            ticks: { color: textColor },
+            grid: { color: gridColor }
+          }
+        }
+      }
+    });
+  }
+    
+  // ============================
+  // SUBMIT
+  // ============================
+  async function submitData() {
+    const date = document.getElementById('dateInput').value;
+
+    if (!date) {
+      setStatus("err", "Missing", "Please select a date first.");
+      return;
+    }
+    if (!currentPolygon) {
+      setStatus("err", "Missing", "Please draw a polygon first (use <b>Draw polygon</b> in the panel).");
+      return;
+    }
+
+    disableModes();
+    setStatus("warn", "Running", `<span class="spinner"></span>Running SOC model… Generating smoother 10m surface…`);
+
+    try{
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ polygon: currentPolygon, date: date })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        const msg = result?.detail || result?.error || `Server error (${response.status})`;
+        setStatus("err", "Failed", msg);
+        return;
+      }
+      if (result.error) {
+        setStatus("err", "Failed", result.error);
+        return;
+      }
+
+      const pixels = result.pixels || [];
+      if (!pixels.length){
+        setStatus("err", "No data", "No pixels returned. Try a different date or smaller polygon.");
+        return;
+      }
+
+      document.getElementById("farmStock").innerText = result.soc_stock || "–";
+      renderTimeSeriesChart(result.monthly_time_series || []);
+      const values = pixels.map(p => p.soc_stock).filter(v => isFinite(v));
+      const minV = Math.min(...values);
+      const maxV = Math.max(...values);
+
+      renderGradientOverlay(pixels, currentPolygon, minV, maxV);
+
+      document.getElementById("legendBox").style.display = "block";
+      document.getElementById("minVal").innerText = fmt(minV, 2);
+      document.getElementById("maxVal").innerText = fmt(maxV, 2);
+
+      setStatus("ok", "Done", "SOC mapping and 12-month time series complete.");
+    } catch(err){
+      setStatus("err", "Failed", `Request failed: ${err?.message || err}`);
+    }
+  }
+
+  // ============================
+  // CLEAR
+  // ============================
+  function clearAll(){
+    disableModes();
+
+    drawnItems.clearLayers();
+    currentPolygon = null;
+    currentPolygonLayer = null;
+
+    if (rasterOverlay){
+      map.removeLayer(rasterOverlay);
+      rasterOverlay = null;
+    }
+
+    if (socChart){
+      socChart.destroy();
+      socChart = null;
+    }
+    document.getElementById("chartWrap").style.display = "none";
+    document.getElementById("chartEmpty").style.display = "none";
+
+    document.getElementById("areaDisplay").innerText = "–";
+    document.getElementById("farmStock").innerText = "–";
+    document.getElementById("legendBox").style.display = "none";
+
+    setPolyStatus(false);
+    setStatus("warn", "Idle", "Use <b>Draw polygon</b> in the panel, then pick a date and run the model.");
+  }
+
+  // ============================
+  // INIT
+  // ============================
+  setPolyStatus(false);
+  setStatus("warn", "Idle", "Use <b>Draw polygon</b> in the panel, then pick a date and run the model.");
+</script>
+</body>
+</html>
